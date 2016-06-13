@@ -1,0 +1,107 @@
+package example.bdbtrace;
+
+import SQLite.*;
+import java.io.*;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.TextView;
+import java.sql.*;
+
+public class MainActivity extends Activity {
+
+    /*
+     * This is the main entrance/body of our sample program. This
+     * example illustrates all of the major API usages.
+     */
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        //System.loadLibrary("oracle-jdbc");
+
+        TextView tv = new TextView(this);
+        tv.setText("App Started");
+        setContentView(tv);
+
+
+        System.out.println("Appstart: ");
+
+        String url =
+                "jdbc:sqlite://data/data/example.bdbtrace/example.db";
+        Connection con;
+        String dropString = "drop table if exists COFFEES";
+        String createString;
+        createString = "create table COFFEES "
+                + "(COF_NAME varchar(32), "
+                + "SUP_ID int, " + "PRICE float, " + "SALES int, "
+                + "TOTAL int)";
+        String insertString = "drop table COFFEES if exisits";
+        String query = "select COF_NAME, PRICE from COFFEES";
+        Statement stmt;
+
+
+
+
+        try {
+            Class.forName("SQLite.JDBCDriver");
+
+
+        } catch (java.lang.ClassNotFoundException e) {
+            System.err.print("ClassNotFoundException: ");
+            System.err.println(e.getMessage());
+        }
+
+        try {
+            TextView tv2 = new TextView(this);
+            tv2.setText("I AM HERE");
+            setContentView(tv2);
+
+            con =
+                    DriverManager.getConnection(url, "myLogin", "myPW");
+
+            TextView tv3 = new TextView(this);
+            tv3.setText("I AM HERE YIKES");
+            setContentView(tv3);
+
+            stmt = con.createStatement();
+            stmt.executeUpdate(dropString);
+            stmt.executeUpdate(createString);
+            stmt.close();
+
+            stmt = con.createStatement();
+            stmt.executeUpdate("insert into COFFEES "
+                    + "values('Colombian', 00101, 7.99, 0, 0)");
+
+            stmt.executeUpdate("insert into COFFEES "
+                    + "values('French_Roast', 00049, 8.99, 0, 0)");
+
+            stmt.executeUpdate("insert into COFFEES "
+                    + "values('Espresso', 00150, 9.99, 0, 0)");
+
+            stmt.executeUpdate("insert into COFFEES "
+                    + "values('Colombian_Decaf', 00101, 8.99, 0, 0)");
+
+            stmt.executeUpdate("insert into COFFEES "
+                    + "values('French_Roast_Decaf', 00049, 9.99, 0, 0)");
+
+            ResultSet rs = stmt.executeQuery(query);
+
+            System.out.println("Coffee Break Coffees and Prices:");
+            while (rs.next()) {
+                String s = rs.getString("COF_NAME");
+                float f = rs.getFloat("PRICE");
+                System.out.println(s + "   " + f);
+            }
+            stmt.close();
+            con.close();
+
+            TextView tv4 = new TextView(this);
+            tv4.setText("I AM HERE YIKES END!!!!!");
+            setContentView(tv4);
+
+        } catch (SQLException ex) {
+            System.err.println("SQLException: " + ex.getMessage());
+        }
+    }
+}
+
