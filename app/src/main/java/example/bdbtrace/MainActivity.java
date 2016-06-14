@@ -65,6 +65,15 @@ public class MainActivity extends Activity {
             }
         }
 
+        try {
+            Class.forName("SQLite.JDBCDriver");
+
+
+        } catch (java.lang.ClassNotFoundException e) {
+            System.err.print("ClassNotFoundException: ");
+            System.err.println(e.getMessage());
+        }
+
 
         String url =
                 "jdbc:sqlite://data/data/example.bdbtrace/databases/Contacts";
@@ -74,20 +83,23 @@ public class MainActivity extends Activity {
         putMarker("BDB\n", "trace_marker");
 
         putMarker("START: App started\n", "trace_marker");
+        try {
+            con = DriverManager.getConnection(url);
+            con.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
         putMarker("\"EVENT\":\"DATABASE_OPEN_START\"}\n","trace_marker");
         SQLiteDatabase db = this.openOrCreateDatabase("Contacts",0,null);
+
         //db.execSQL("DROP TABLE IF EXISTS contacts");
         putMarker("\"EVENT\":\"DATABASE_OPEN_END\"}\n","trace_marker");
 
         boolean isTableExists = false;
         Cursor cursor1 = db.rawQuery("select DISTINCT tbl_name from sqlite_master where tbl_name = 'employee'",null);
 
-        try {
-            con = DriverManager.getConnection(url);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+
 
         if(cursor1.moveToFirst()) {
             isTableExists = true;
