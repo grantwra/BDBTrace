@@ -91,7 +91,7 @@ public class MainActivity extends Activity {
         }
 
         putMarker("\"EVENT\":\"DATABASE_OPEN_START\"}\n","trace_marker");
-        SQLiteDatabase db = this.openOrCreateDatabase("Contacts",0,null);
+        SQLiteDatabase db = this.openOrCreateDatabase("jdbc:sqlite:Contacts",0,null);
 
         //db.execSQL("DROP TABLE IF EXISTS contacts");
         putMarker("\"EVENT\":\"DATABASE_OPEN_END\"}\n","trace_marker");
