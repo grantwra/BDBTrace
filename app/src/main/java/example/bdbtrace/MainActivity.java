@@ -65,6 +65,10 @@ public class MainActivity extends Activity {
             }
         }
 
+        putMarker("BDBJDBC\n", "trace_marker");
+
+        putMarker("START: App started\n", "trace_marker");
+
         try {
             Class.forName("SQLite.JDBCDriver");
 
@@ -76,10 +80,90 @@ public class MainActivity extends Activity {
 
 
         String url =
-                "jdbc:sqlite://data/data/example.bdbtrace/databases/Contacts";
+                "jdbc:sqlite://data/data/example.bdbtrace/databases/Contacts2";
         Connection con;
+        String dropString = "drop table if exists contacts";
+        String createString, createString2;
+        createString = "CREATE TABLE dept (id INTEGER PRIMARY KEY, name TEXT) ";
+        createString2 = "CREATE TABLE employee (id INTEGER PRIMARY KEY, name TEXT, dept INTEGER, designation TEXT, FOREIGN KEY(dept) REFERENCES dept(id))";
+
+        Stmt stmt2;
+        Statement stmt;
+
+        try {
+            Class.forName("SQLite.JDBCDriver");
 
 
+        } catch (java.lang.ClassNotFoundException e) {
+            System.err.print("ClassNotFoundException: ");
+            System.err.println(e.getMessage());
+        }
+
+        boolean doesTableExist = false;
+        File file = new File("/data/data/example.bdbtrace/databases/Contacts2");
+        if(file.exists()){
+            doesTableExist = true;
+        }
+
+        if(doesTableExist != true) {
+            try {
+                putMarker("\"EVENT\":\"DATABASE_OPEN_START\"}\n","trace_marker");
+                con = DriverManager.getConnection(url);
+                putMarker("\"EVENT\":\"DATABASE_OPEN_END\"}\n","trace_marker");
+                stmt = con.createStatement();
+                stmt.executeUpdate(dropString);
+
+                putMarker("{\"EVENT\":\"CREATE_START\"}", "trace_marker");
+                stmt.executeUpdate(createString);
+                putMarker("{\"EVENT\":\"CREATE_END\"}", "trace_marker");
+                stmt.close();
+
+                putMarker("{\"EVENT\":\"TRANSACTION_START\"}", "trace_marker");
+                stmt = con.createStatement();
+                for(int i = 0; i < 10; i++){
+                    putMarker("{\"EVENT\":\"INSERT_START\"}", "trace_marker");
+
+                    stmt.executeUpdate("INSERT INTO dept VALUES(" + i + ",'dept')");
+
+                    putMarker("{\"EVENT\":\"INSERT_END\"}", "trace_marker");
+                }
+                stmt.close();
+                putMarker("{\"EVENT\":\"TRANSACTION_END\"}", "trace_marker");
+
+                putMarker("{\"EVENT\":\"CREATE_START\"}", "trace_marker");
+                stmt = con.createStatement();
+                stmt.executeUpdate(createString2);
+                stmt.close();
+                putMarker("{\"EVENT\":\"CREATE_END\"}", "trace_marker");
+
+                putMarker("{\"EVENT\":\"TRANSACTION_START\"}", "trace_marker");
+                stmt = con.createStatement();
+                for(int j = 0; j < 500; j++){
+                    putMarker("{\"EVENT\":\"INSERT_START\"}", "trace_marker");
+
+                    stmt.executeUpdate("INSERT INTO employee VALUES(" + j + ",'John Doe','dept)");
+
+                    putMarker("{\"EVENT\":\"INSERT_END\"}", "trace_marker");
+                }
+                stmt.close();
+                putMarker("{\"EVENT\":\"TRANSACTION_END\"}", "trace_marker");
+
+                putMarker("{\"EVENT\":\"CLOSE_START\"}\n", "trace_marker");
+                con.close();
+
+                putMarker("{\"EVENT\":\"CLOSE_END\"}\n", "trace_marker");
+
+
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            this.finishAffinity();
+            return;
+        }
+
+
+/************************************************************************************
         putMarker("BDB\n", "trace_marker");
 
         putMarker("START: App started\n", "trace_marker");
@@ -91,7 +175,7 @@ public class MainActivity extends Activity {
         }
 
         putMarker("\"EVENT\":\"DATABASE_OPEN_START\"}\n","trace_marker");
-        SQLiteDatabase db = this.openOrCreateDatabase("jdbc:sqlite:Contacts",0,null);
+        SQLiteDatabase db = this.openOrCreateDatabase("Contacts",0,null);
 
         //db.execSQL("DROP TABLE IF EXISTS contacts");
         putMarker("\"EVENT\":\"DATABASE_OPEN_END\"}\n","trace_marker");
@@ -164,60 +248,88 @@ public class MainActivity extends Activity {
             return;
 
         }
+************************************************************************************/
 
-        String type = "";
-        String query = "";
-        FileInputStream queryFile;
+        //SQLiteDatabase db = this.openOrCreateDatabase("Contacts2",0,null);
         try {
-            //  putMarker("\"EVENT\":\"TEST\"}\n","trace_marker");
-            queryFile = this.openFileInput("query.log");
-            //   putMarker("\"EVENT\":\"TEST\"}\n","trace_marker");
-            JsonReader reader = new JsonReader(new InputStreamReader(queryFile,"UTF-8"));
-            reader.beginArray();
-            while(reader.hasNext()) {
-                reader.beginObject();
+            con = DriverManager.getConnection(url);
+
+            String type = "";
+            String query = "";
+            FileInputStream queryFile;
+            try {
+                //  putMarker("\"EVENT\":\"TEST\"}\n","trace_marker");
+                queryFile = this.openFileInput("query.log");
+                //   putMarker("\"EVENT\":\"TEST\"}\n","trace_marker");
+                JsonReader reader = new JsonReader(new InputStreamReader(queryFile, "UTF-8"));
+                reader.beginArray();
                 while (reader.hasNext()) {
-                    String temp = reader.nextName();
-                    if (temp.equals("type")) {
-                        type = reader.nextString();
-                    } else if (temp.equals("query")) {
-                        query = reader.nextString();
+                    reader.beginObject();
+                    while (reader.hasNext()) {
+                        String temp = reader.nextName();
+                        if (temp.equals("type")) {
+                            type = reader.nextString();
+                        } else if (temp.equals("query")) {
+                            query = reader.nextString();
+                        }
                     }
-                }
-                reader.endObject();
-                //flushCache();
-                if(type.equals("SELECT")) {
-                    putMarker("{\"EVENT\":\"SELECT_START\"}\n","trace_marker");
-                    Cursor cursor = db.rawQuery(query,null);
-                    if(cursor.moveToFirst()) {
-                        int numColumns = cursor.getColumnCount();
-                        do {
-                            for(int j=0; j< numColumns; j++) {
-                                //String temp = cursor.toString();
+                    reader.endObject();
+                    //flushCache();
+                    if (type.equals("SELECT")) {
+                        putMarker("{\"EVENT\":\"SELECT_START\"}\n", "trace_marker");
+                        //Cursor cursor = db.rawQuery(query, null);
+                        stmt = con.createStatement();
+                        ResultSet rs = stmt.executeQuery("select id, name from dept");
+                        if(rs.first()){
+                            ResultSetMetaData rsmd = rs.getMetaData();
+                            int numCols =rsmd.getColumnCount();
+                            for(int x = 0; x < numCols; x++){
+
                             }
-                            //process cursor
-                        } while(cursor.moveToNext());
+                        } while(rs.next());
+
+                       /* if (cursor.moveToFirst()) {
+                            int numColumns = cursor.getColumnCount();
+                            do {
+                                for (int j = 0; j < numColumns; j++) {
+                                    //String temp = cursor.toString();
+                                }
+                                //process cursor
+                            } while (cursor.moveToNext());
+                        }
+                        cursor.close(); */
+                        stmt.close();
+                        putMarker("{\"EVENT\":\"SELECT_END\"}\n", "trace_marker");
+                    } else if (type.equals("INSERT") || type.equals("UPDATE") || type.equals("DELETE")) {
+                        putMarker("{\"EVENT\":\"" + type + "_START\"}\n", "trace_marker");
+                        //db.execSQL(query);
+                        stmt = con.createStatement();
+                        if(type.equals("UPDATE")){
+                            stmt.executeUpdate("UPDATE employee SET name='John Doe New ' ");
+                        }
+                        else {
+                            stmt.executeQuery(query);
+                        }
+                        stmt.close();
+                        putMarker("{\"EVENT\":\"" + type + "_END\"}\n", "trace_marker");
                     }
-                    cursor.close();
-                    putMarker("{\"EVENT\":\"SELECT_END\"}\n", "trace_marker");
-                } else if(type.equals("INSERT") || type.equals("UPDATE") || type.equals("DELETE")) {
-                    putMarker("{\"EVENT\":\""+type+"_START\"}\n","trace_marker");
-                    db.execSQL(query);
-                    putMarker("{\"EVENT\":\""+type+"_END\"}\n","trace_marker");
                 }
+                reader.endArray();
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-            reader.endArray();
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            //if (db.isOpen()) {
+              if(!con.isClosed()) {
+                putMarker("\"EVENT\":\"DATABASE_CLOSE_START\"}\n", "trace_marker");
+                //db.close();
+                  con.close();
+                  putMarker("\"EVENT\":\"DATABASE_CLOSE_END\"}\n", "trace_marker");
+            }
+        } catch (SQLException e){
+            e.printStackTrace();
         }
-
-        if(db.isOpen()) {
-            putMarker("\"EVENT\":\"DATABASE_CLOSE_START\"}\n","trace_marker");
-            db.close();
-            putMarker("\"EVENT\":\"DATABASE_CLOSE_END\"}\n","trace_marker");
-        }
-
         /*
         //putMarker("\"EVENT\":\"DATABASE_OPEN_START\"}\n","trace_marker");
         db = SQLiteDatabase.openDatabase(this.getDatabasePath("Contacts").getPath(), null, SQLiteDatabase.OPEN_READONLY);
